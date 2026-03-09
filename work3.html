@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Tummy Trekkers - 作品详情</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #f5f4f1;
+      --surface:   #ffffff;
+      --ink:       #1a1a18;
+      --ink-muted: #888880;
+      --accent:    #1a1a18;
+      --rule:      rgba(26,26,24,0.10);
+      --radius:    4px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overscroll-behavior: none;
+    }
+
+    /* ── 顶部导航栏 ── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(245,244,241,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      height: 52px;
+    }
+
+    .nav-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .nav-back:active { opacity: 1; }
+    .nav-back svg { width: 16px; height: 16px; }
+
+    .nav-index {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    /* ── 页面主体 ── */
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 36px 20px 64px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: pageIn 0.5s cubic-bezier(0.22,1,0.36,1) 0.05s forwards;
+    }
+    @keyframes pageIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── 作品标题区 ── */
+    .work-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 10px;
+      font-weight: 400;
+    }
+
+    .work-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .work-type {
+      font-size: 13px;
+      color: var(--ink-muted);
+      font-weight: 300;
+      letter-spacing: 0.03em;
+      margin-bottom: 32px;
+    }
+
+    /* ── 分隔线 ── */
+    .rule {
+      width: 32px;
+      height: 1px;
+      background: var(--ink);
+      margin-bottom: 32px;
+      opacity: 0.25;
+    }
+
+    /* ── 图片画廊 ── */
+    .gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .gallery-item {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: #e8e7e3;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22,1,0.36,1);
+    }
+    .gallery-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: auto;
+      display: block;
+      vertical-align: top;
+      transition: transform 0.4s ease;
+    }
+    .gallery-item:active img {
+      transform: scale(1.02);
+    }
+
+    /* 第一张大图全宽，高度随图片比例 */
+    .gallery-item:first-child {
+      /* 不固定 aspect-ratio，由图片自身比例决定 */
+    }
+    /* 后续图片两列，高度随图片比例 */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* 图片序号角标 */
+    .gallery-item .item-num {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.7);
+      background: rgba(0,0,0,0.25);
+      padding: 3px 7px;
+      border-radius: 100px;
+      backdrop-filter: blur(4px);
+      font-weight: 500;
+    }
+
+    /* ── 全屏预览遮罩 ── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,8,0.95);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #lightbox.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #lightbox img {
+      max-width: 94vw;
+      max-height: 88vh;
+      object-fit: contain;
+      border-radius: 3px;
+    }
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.12);
+      border-radius: 50%;
+      cursor: pointer;
+      color: #fff;
+      font-size: 18px;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航栏 -->
+  <nav class="nav">
+    <a class="nav-back" href="javascript:history.back()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M10 3L5 8l5 5"/>
+      </svg>
+      返回
+    </a>
+    <!-- ✏️ 改成 "01 / 03" "02 / 03" "03 / 03" 对应三个作品页 -->
+    <span class="nav-index">03 / 03</span>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="page">
+
+    <!-- 标题区 -->
+    <!-- ✏️ 修改下方的作品标签、名称、类型 -->
+    <p class="work-label">Selected Work</p>
+    <h1 class="work-title">Tummy Trekkers</h1>
+    <p class="work-type">VI设计 · 2025</p>
+
+    <div class="rule"></div>
+
+    <!-- 图片画廊：与 assets 中 work3-detail1/2/3.png 对应 -->
+    <div class="gallery">
+
+      <!-- 第一张：大图全宽 -->
+      <div class="gallery-item">
+        <span class="item-num">01</span>
+        <img src="assets/work3-detail1.png" alt="Tummy Trekkers 细节1" loading="lazy" />
+      </div>
+
+      <!-- 后续：两列网格 -->
+      <div class="gallery-grid">
+        <div class="gallery-item">
+          <span class="item-num">02</span>
+          <img src="assets/work3-detail2.png" alt="Tummy Trekkers 细节2" loading="lazy" />
+        </div>
+        <div class="gallery-item">
+          <span class="item-num">03</span>
+          <img src="assets/work3-detail3.png" alt="Tummy Trekkers 细节3" loading="lazy" />
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 全屏预览遮罩 -->
+  <div id="lightbox">
+    <div id="lightbox-close">✕</div>
+    <img id="lightbox-img" src="" alt="" />
+  </div>
+
+  <script>
+    // ── 图片滚动渐入 ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 60);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.gallery-item').forEach(el => observer.observe(el));
+
+    // ── 点击图片全屏预览 ──
+    const lightbox    = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const closeBtn    = document.getElementById('lightbox-close');
+
+    document.querySelectorAll('.gallery-item img').forEach(img => {
+      img.addEventListener('click', () => {
+        lightboxImg.src = img.src;
+        lightbox.classList.add('open');
+      });
+    });
+
+    closeBtn.addEventListener('click', () => lightbox.classList.remove('open'));
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) lightbox.classList.remove('open');
+    });
+  </script>
+</body>
+</html>

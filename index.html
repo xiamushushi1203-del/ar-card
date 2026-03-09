@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Name Card</title>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { overflow: hidden; }
+
+      #loading-screen {
+        position: fixed; inset: 0;
+        background: #080808;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 9999; transition: opacity 0.7s ease;
+      }
+      #loading-screen.hidden { opacity: 0; pointer-events: none; }
+      .loader-ring {
+        width: 52px; height: 52px;
+        border: 2px solid rgba(255,255,255,0.08);
+        border-top-color: rgba(255,255,255,0.85);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .loader-label {
+        color: rgba(255,255,255,0.4); font-size: 11px;
+        letter-spacing: 0.2em; text-transform: uppercase;
+        font-family: -apple-system, sans-serif;
+      }
+
+      #scan-hint {
+        position: fixed; bottom: 44px; left: 50%;
+        transform: translateX(-50%);
+        background: rgba(10,10,10,0.6);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        color: rgba(255,255,255,0.9); font-size: 12px;
+        letter-spacing: 0.12em; padding: 11px 22px;
+        border-radius: 100px; border: 1px solid rgba(255,255,255,0.12);
+        z-index: 100; opacity: 0; transition: opacity 0.5s ease;
+        font-family: -apple-system, sans-serif; white-space: nowrap;
+      }
+      #scan-hint.show { opacity: 1; }
+      #scan-hint.hide { opacity: 0; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="loading-screen">
+      <div class="loader-ring"></div>
+      <p class="loader-label">正在启动 AR…</p>
+    </div>
+    <div id="scan-hint">将摄像头对准名片</div>
+
+    <a-scene
+      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
+      color-space="sRGB"
+      renderer="colorManagement: true;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <!-- ✏️ 把你的素材放进 assets/ 文件夹，修改下方文件名 -->
+
+        <!-- 介绍视频（与名片同尺寸） -->
+        <video id="main-video" src="assets/video.mp4"
+          playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
+        </video>
+
+        <!-- 作品集图片（3张） -->
+        <img id="work1" src="assets/work1.png" crossorigin="anonymous" />
+        <img id="work2" src="assets/work2.png" crossorigin="anonymous" />
+        <img id="work3" src="assets/work3.png" crossorigin="anonymous" />
+
+        <!-- 社交图标（透明PNG，建议200×200px） -->
+        <img id="icon-rednote" src="assets/icon-rednote.png" crossorigin="anonymous" />
+        <img id="icon-wechat"  src="assets/icon-wechat.png"  crossorigin="anonymous" />
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity id="card-target" mindar-image-target="targetIndex: 0">
+
+        <!-- 1. 视频层：可缩小比例（scale=0.8 即 80%，改此数即可调节大小） -->
+        <!-- 视频比例 3509×2481 → 满屏为 width=1 height≈0.707 -->
+        <a-video id="ar-video" src="#main-video"
+          position="0 0 0.001" width="0.8" height="0.566"
+          material="transparent: true; opacity: 0"
+          animation__appear="property: material.opacity; to: 1; dur: 600; easing: easeOutQuad; startEvents: videoStart">
+        </a-video>
+
+        <!-- 2. 作品集图片：名片下方横排，视频半程时滑入（y 已按新卡片高度 0.707 适配） -->
+        <a-image id="work-1" src="#work1"
+          position="-0.38 -0.85 0.01" width="0.32" height="0.20"
+          material="transparent: true; opacity: 0"
+          animation__slidein="property: position; to: -0.38 -0.55 0.01; dur: 500; easing: easeOutBack; startEvents: showExtras"
+          animation__fadein="property: material.opacity; to: 1; dur: 400; startEvents: showExtras"
+          class="clickable"
+          data-url="work1.html">
+        </a-image>
+
+        <a-image id="work-2" src="#work2"
+          position="0 -0.85 0.01" width="0.32" height="0.20"
+          material="transparent: true; opacity: 0"
+          animation__slidein="property: position; to: 0 -0.55 0.01; dur: 500; delay: 80; easing: easeOutBack; startEvents: showExtras"
+          animation__fadein="property: material.opacity; to: 1; dur: 400; delay: 80; startEvents: showExtras"
+          class="clickable"
+          data-url="work2.html">
+        </a-image>
+
+        <a-image id="work-3" src="#work3"
+          position="0.38 -0.85 0.01" width="0.32" height="0.20"
+          material="transparent: true; opacity: 0"
+          animation__slidein="property: position; to: 0.38 -0.55 0.01; dur: 500; delay: 160; easing: easeOutBack; startEvents: showExtras"
+          animation__fadein="property: material.opacity; to: 1; dur: 400; delay: 160; startEvents: showExtras"
+          class="clickable"
+          data-url="work3.html">
+        </a-image>
+
+        <!-- 3. 社交图标：名片右侧，同步滑入。点击后在新标签页打开下方 data-url 的链接 -->
+        <!-- 小红书：把 data-url 改成你的小红书主页链接（见下方说明） -->
+        <a-image id="btn-rednote" src="#icon-rednote"
+          position="0.8 -0.12 0.01" width="0.14" height="0.14"
+          material="transparent: true; opacity: 0"
+          animation__slidein="property: position; to: 0.62 -0.12 0.01; dur: 450; delay: 50; easing: easeOutBack; startEvents: showExtras"
+          animation__fadein="property: material.opacity; to: 1; dur: 350; delay: 50; startEvents: showExtras"
+          animation__pulse="property: scale; to: 1.08 1.08 1; dur: 800; dir: alternate; loop: true; easing: easeInOutSine"
+          class="clickable"
+          data-url="https://www.xiaohongshu.com/user/profile/610ccdc0000000000101d2f9">
+        </a-image>
+
+        <!-- 微信：把 data-url 改成你的二维码页面链接或微信号展示页链接 -->
+        <a-image id="btn-wechat" src="#icon-wechat"
+          position="0.8 -0.28 0.01" width="0.14" height="0.14"
+          material="transparent: true; opacity: 0"
+          animation__slidein="property: position; to: 0.62 -0.28 0.01; dur: 450; delay: 160; easing: easeOutBack; startEvents: showExtras"
+          animation__fadein="property: material.opacity; to: 1; dur: 350; delay: 160; startEvents: showExtras"
+          animation__pulse="property: scale; to: 1.08 1.08 1; dur: 800; dir: alternate; loop: true; delay: 250; easing: easeInOutSine"
+          class="clickable"
+          data-url="https://www.figma.com/board/jzSb3oe5202wutuxvNru3P/Untitled?node-id=0-1&amp;t=b49XkvM1nCuJrE2R-1">
+        </a-image>
+
+      </a-entity>
+    </a-scene>
+
+    <script>
+      const loadingEl  = document.getElementById('loading-screen');
+      const scanHintEl = document.getElementById('scan-hint');
+      const video      = document.getElementById('main-video');
+      const scene      = document.querySelector('a-scene');
+      const arVideo    = document.getElementById('ar-video');
+
+      let extrasShown = false;
+      let halfTimer   = null;
+
+      // AR 就绪 → 隐藏加载画面，显示扫描提示
+      scene.addEventListener('arReady', () => {
+        loadingEl.classList.add('hidden');
+        scanHintEl.classList.add('show');
+      });
+
+      // 识别到名片
+      scene.addEventListener('targetFound', () => {
+        scanHintEl.classList.remove('show');
+        scanHintEl.classList.add('hide');
+        extrasShown = false;
+
+        video.currentTime = 0;
+        video.play().catch(() => {});
+        arVideo.emit('videoStart');
+
+        // 每200ms检查：播到一半 → 触发图标和作品图
+        halfTimer = setInterval(() => {
+          if (!video.paused && video.duration > 0) {
+            if (video.currentTime >= video.duration / 2 && !extrasShown) {
+              extrasShown = true;
+              clearInterval(halfTimer);
+              document.querySelectorAll('[animation__slidein]').forEach(el => el.emit('showExtras'));
+            }
+          }
+        }, 200);
+      });
+
+      // 丢失名片 → 暂停，重显提示
+      scene.addEventListener('targetLost', () => {
+        video.pause();
+        clearInterval(halfTimer);
+        scanHintEl.classList.remove('hide');
+        scanHintEl.classList.add('show');
+      });
+
+      // 社交图标点击跳转
+      document.querySelectorAll('[data-url]').forEach(el => {
+        el.addEventListener('click', () => {
+          const url = el.getAttribute('data-url');
+          if (url) window.open(url, '_blank');
+        });
+      });
+
+      // iOS 备用：首次点击触发视频播放
+      document.body.addEventListener('click', () => {
+        if (video.paused) video.play().catch(() => {});
+      }, { once: true });
+    </script>
+  </body>
+</html>
