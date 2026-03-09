@@ -5,43 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AR Name Card</title>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { overflow: hidden; }
 
+      /* ── 加载画面 ── */
       #loading-screen {
         position: fixed; inset: 0;
-        background: #080808;
+        background: #f0de00;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        z-index: 9999; transition: opacity 0.7s ease;
+        z-index: 9999;
+        transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1);
+        overflow: hidden;
       }
       #loading-screen.hidden { opacity: 0; pointer-events: none; }
-      .loader-ring {
-        width: 52px; height: 52px;
-        border: 2px solid rgba(255,255,255,0.08);
-        border-top-color: rgba(255,255,255,0.85);
+
+      /* 背景扩散圆环 */
+      #loading-screen::before {
+        content: '';
+        position: absolute;
+        width: 420px; height: 420px;
         border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
+        border: 1.5px solid rgba(0,0,0,0.08);
+        animation: expandRing 2.5s ease-out infinite;
       }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .loader-label {
-        color: rgba(255,255,255,0.4); font-size: 11px;
-        letter-spacing: 0.2em; text-transform: uppercase;
-        font-family: -apple-system, sans-serif;
+      #loading-screen::after {
+        content: '';
+        position: absolute;
+        width: 420px; height: 420px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(0,0,0,0.05);
+        animation: expandRing 2.5s ease-out 0.8s infinite;
+      }
+      @keyframes expandRing {
+        0%   { transform: scale(0.3); opacity: 0.6; }
+        100% { transform: scale(1.8); opacity: 0; }
       }
 
+      /* 名字大字 */
+      .loader-name {
+        font-family: 'DM Serif Display', serif;
+        font-style: italic;
+        font-size: 52px;
+        color: #1a1a18;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        margin-bottom: 6px;
+        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+      }
+      .loader-tagline {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 300;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(26,26,24,0.5);
+        margin-bottom: 52px;
+        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* 进度条 */
+      .loader-bar-wrap {
+        width: 120px; height: 1px;
+        background: rgba(26,26,24,0.15);
+        border-radius: 1px; overflow: hidden;
+        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+      }
+      .loader-bar {
+        height: 100%; width: 0%;
+        background: #1a1a18; border-radius: 1px;
+        animation: barFill 2.2s cubic-bezier(0.4,0,0.2,1) 0.3s forwards;
+      }
+      @keyframes barFill {
+        0%   { width: 0%; }
+        60%  { width: 75%; }
+        100% { width: 100%; }
+      }
+      .loader-status {
+        margin-top: 14px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 10px; letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(26,26,24,0.4);
+        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.25s both;
+      }
+
+      /* ── 扫描提示 ── */
       #scan-hint {
         position: fixed; bottom: 44px; left: 50%;
         transform: translateX(-50%);
-        background: rgba(10,10,10,0.6);
+        background: rgba(10,10,8,0.55);
         backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
         color: rgba(255,255,255,0.9); font-size: 12px;
         letter-spacing: 0.12em; padding: 11px 22px;
         border-radius: 100px; border: 1px solid rgba(255,255,255,0.12);
         z-index: 100; opacity: 0; transition: opacity 0.5s ease;
-        font-family: -apple-system, sans-serif; white-space: nowrap;
+        font-family: 'DM Sans', sans-serif; white-space: nowrap;
       }
       #scan-hint.show { opacity: 1; }
       #scan-hint.hide { opacity: 0; pointer-events: none; }
@@ -49,8 +115,12 @@
   </head>
   <body>
     <div id="loading-screen">
-      <div class="loader-ring"></div>
-      <p class="loader-label">正在启动 AR…</p>
+      <p class="loader-name">Zixuan Cai</p>
+      <p class="loader-tagline">AR Name Card</p>
+      <div class="loader-bar-wrap">
+        <div class="loader-bar"></div>
+      </div>
+      <p class="loader-status">Initializing…</p>
     </div>
     <div id="scan-hint">将摄像头对准名片</div>
 
@@ -199,10 +269,10 @@
         });
       });
 
-      // iOS 备用：首次点击触发视频播放
-      document.body.addEventListener('click', () => {
-        if (video.paused) video.play().catch(() => {});
-      }, { once: true });
+      // 调试日志（确认事件正常触发）
+      scene.addEventListener('arReady',     () => console.log('✅ arReady'));
+      scene.addEventListener('targetFound', () => console.log('✅ targetFound'));
+      scene.addEventListener('targetLost',  () => console.log('⚠️ targetLost'));
     </script>
   </body>
 </html>
