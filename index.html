@@ -269,10 +269,20 @@
         });
       });
 
-      // 调试日志（确认事件正常触发）
-      scene.addEventListener('arReady',     () => console.log('✅ arReady'));
-      scene.addEventListener('targetFound', () => console.log('✅ targetFound'));
-      scene.addEventListener('targetLost',  () => console.log('⚠️ targetLost'));
+      // 屏幕调试面板
+      const dbg = document.createElement('div');
+      dbg.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.75);color:#0f0;font-size:11px;padding:10px;border-radius:8px;z-index:99999;font-family:monospace;max-height:40vh;overflow-y:auto;';
+      document.body.appendChild(dbg);
+      function log(msg) {
+        const t = new Date().toLocaleTimeString();
+        dbg.innerHTML += t + ' ' + msg + '<br>';
+        dbg.scrollTop = dbg.scrollHeight;
+      }
+      log('页面加载完成');
+      scene.addEventListener('arReady',     () => { log('✅ arReady — 摄像头就绪'); });
+      scene.addEventListener('targetFound', () => { log('✅ targetFound — 识别到名片'); });
+      scene.addEventListener('targetLost',  () => { log('⚠️ targetLost — 丢失名片'); });
+      window.addEventListener('error', e => log('❌ ' + e.message));
     </script>
   </body>
 </html>
