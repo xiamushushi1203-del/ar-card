@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AR Name Card</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
@@ -144,7 +145,7 @@
 
         <!-- 介绍视频（与名片同尺寸） -->
         <video id="main-video" src="assets/video.mp4"
-          playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
+          muted playsinline webkit-playsinline preload="metadata" crossorigin="anonymous">
         </video>
 
         <!-- 作品集图片（3张） -->
@@ -241,7 +242,10 @@
       let readyTimeout = null;
 
       // 必须等 a-scene 触发 loaded 后再访问 mindar-image-system，否则 iPhone Safari 报错
-      scene.addEventListener('loaded', () => { sceneLoaded = true; });
+      scene.addEventListener('loaded', () => {
+        sceneLoaded = true;
+        if (typeof log === 'function') log('✅ a-scene loaded — 场景已加载');
+      });
 
       function getARSystem() {
         if (!sceneLoaded) return null;
@@ -259,8 +263,27 @@
       }
 
       function startAR() {
-        if (arStarted) return;
-        if (!sceneLoaded) return; // 场景未加载完成时不访问 systems，避免报错
+        log('startAR called');
+
+        if (arStarted) {
+          log('⚠️ already started');
+          return;
+        }
+
+        if (!sceneLoaded) {
+          log('⚠️ scene not loaded yet');
+          loaderStatus.textContent = '场景加载中，请稍候…';
+          if (loaderSublabel) loaderSublabel.textContent = '约 1～2 秒后再点屏幕';
+          window.setTimeout(() => {
+            if (!arStarted && !loadingEl.classList.contains('hidden')) {
+              loaderStatus.textContent = '点击屏幕启动 AR';
+              if (loaderSublabel) loaderSublabel.textContent = '需在用户操作后开启摄像头（iOS 兼容）';
+            }
+          }, 2000);
+          return;
+        }
+
+        log('✅ scene loaded, starting AR');
         arStarted = true;
         loadingEl.classList.remove('waiting', 'error');
         loadingErr.textContent = '';
@@ -297,13 +320,17 @@
       }
 
       loadingEl.addEventListener('click', () => {
+        log('👆 loading screen clicked');
         if (loadingEl.classList.contains('hidden')) return;
         if (!arStarted) { startAR(); return; }
         if (loadingEl.classList.contains('error')) {
           loadingEl.classList.remove('error');
           loadingEl.classList.add('waiting');
           loaderStatus.textContent = '点击屏幕启动 AR';
-          if (loaderSublabel) { loaderSublabel.style.display = ''; loaderSublabel.textContent = '需在用户操作后开启摄像头（iOS 兼容）'; }
+          if (loaderSublabel) {
+            loaderSublabel.style.display = '';
+            loaderSublabel.textContent = '需在用户操作后开启摄像头（iOS 兼容）';
+          }
           loadingErr.textContent = '';
           arStarted = false;
         }
