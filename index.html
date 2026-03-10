@@ -22,6 +22,11 @@
         overflow: hidden;
       }
       #loading-screen.hidden { opacity: 0; pointer-events: none; }
+      #loading-screen.waiting { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      #loading-screen.error .loader-bar-wrap { display: none; }
+      .loader-sublabel { font-family: 'DM Sans', sans-serif; font-size: 10px; letter-spacing: 0.1em; color: rgba(26,26,24,0.4); margin-top: 6px; }
+      #loading-error { color: #c00; font-size: 11px; margin-top: 12px; max-width: 80%; text-align: center; display: none; }
+      #loading-screen.error #loading-error { display: block; }
 
       /* 背景扩散圆环 */
       #loading-screen::before {
@@ -114,18 +119,21 @@
     </style>
   </head>
   <body>
-    <div id="loading-screen">
+    <div id="loading-screen" class="waiting">
       <p class="loader-name">Zixuan Cai</p>
       <p class="loader-tagline">AR Name Card</p>
       <div class="loader-bar-wrap">
         <div class="loader-bar"></div>
       </div>
-      <p class="loader-status">Initializing…</p>
+      <p class="loader-status" id="loader-status">点击屏幕启动 AR</p>
+      <p class="loader-sublabel" id="loader-sublabel">需在用户操作后开启摄像头（iOS 兼容）</p>
+      <p id="loading-error"></p>
     </div>
     <div id="scan-hint">将摄像头对准名片</div>
 
+    <!-- iOS Safari：autoStart: false，在用户点击后再请求摄像头 -->
     <a-scene
-      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
+      mindar-image="imageTargetSrc: targets.mind; autoStart: false;"
       color-space="sRGB"
       renderer="colorManagement: true;"
       vr-mode-ui="enabled: false"
@@ -216,19 +224,101 @@
     </a-scene>
 
     <script>
-      const loadingEl  = document.getElementById('loading-screen');
-      const scanHintEl = document.getElementById('scan-hint');
-      const video      = document.getElementById('main-video');
-      const scene      = document.querySelector('a-scene');
-      const arVideo    = document.getElementById('ar-video');
+      const loadingEl    = document.getElementById('loading-screen');
+      const loaderStatus = document.getElementById('loader-status');
+      const loaderSublabel = document.getElementById('loader-sublabel');
+      const loadingErr   = document.getElementById('loading-error');
+      const scanHintEl   = document.getElementById('scan-hint');
+      const video        = document.getElementById('main-video');
+      const scene        = document.querySelector('a-scene');
+      const arVideo      = document.getElementById('ar-video');
 
+      let arStarted = false;
+      let arReadyFired = false;
       let extrasShown = false;
-      let halfTimer   = null;
+      let halfTimer = null;
+      let readyTimeout = null;
+
+      function getARSystem() {
+        return scene.systems['mindar-image-system'] || scene.systems['mindar-image'] || null;
+      }
+      function clearReadyTimeout() {
+        if (readyTimeout) { clearTimeout(readyTimeout); readyTimeout = null; }
+      }
+      function showError(msg) {
+        loadingEl.classList.add('error');
+        loadingEl.classList.remove('waiting');
+        loaderStatus.textContent = '启动失败';
+        if (loaderSublabel) loaderSublabel.style.display = 'none';
+        loadingErr.textContent = msg;
+      }
+
+      function startAR() {
+        if (arStarted) return;
+        arStarted = true;
+        loadingEl.classList.remove('waiting', 'error');
+        loadingErr.textContent = '';
+        loaderStatus.textContent = 'Initializing…';
+        if (loaderSublabel) loaderSublabel.style.display = 'none';
+
+        const arSystem = getARSystem();
+        if (!arSystem || typeof arSystem.start !== 'function') {
+          showError('AR 组件未就绪，请刷新页面重试。');
+          arStarted = false;
+          return;
+        }
+
+        clearReadyTimeout();
+        readyTimeout = setTimeout(() => {
+          if (arReadyFired) return;
+          showError('摄像头或目标文件加载超时。请确认：1) 使用 HTTPS 打开 2) 允许相机权限 3) targets.mind 可访问。点击屏幕重试。');
+          loadingEl.classList.add('waiting');
+          if (loaderSublabel) { loaderSublabel.style.display = ''; loaderSublabel.textContent = '点击屏幕重试'; }
+          loaderStatus.textContent = '点击屏幕启动 AR';
+          arStarted = false;
+        }, 15000);
+
+        try {
+          arSystem.start();
+        } catch (e) {
+          clearReadyTimeout();
+          showError('启动异常: ' + (e.message || '未知错误') + '。点击屏幕重试。');
+          loadingEl.classList.add('waiting');
+          if (loaderSublabel) { loaderSublabel.style.display = ''; loaderSublabel.textContent = '点击屏幕重试'; }
+          loaderStatus.textContent = '点击屏幕启动 AR';
+          arStarted = false;
+        }
+      }
+
+      loadingEl.addEventListener('click', () => {
+        if (loadingEl.classList.contains('hidden')) return;
+        if (!arStarted) { startAR(); return; }
+        if (loadingEl.classList.contains('error')) {
+          loadingEl.classList.remove('error');
+          loadingEl.classList.add('waiting');
+          loaderStatus.textContent = '点击屏幕启动 AR';
+          if (loaderSublabel) { loaderSublabel.style.display = ''; loaderSublabel.textContent = '需在用户操作后开启摄像头（iOS 兼容）'; }
+          loadingErr.textContent = '';
+          arStarted = false;
+        }
+      });
 
       // AR 就绪 → 隐藏加载画面，显示扫描提示
       scene.addEventListener('arReady', () => {
+        arReadyFired = true;
+        clearReadyTimeout();
         loadingEl.classList.add('hidden');
         scanHintEl.classList.add('show');
+      });
+
+      scene.addEventListener('arError', (e) => {
+        clearReadyTimeout();
+        const msg = (e && e.detail && e.detail.message) ? e.detail.message : 'AR 初始化错误';
+        showError(msg + '。点击屏幕重试。');
+        loadingEl.classList.add('waiting');
+        if (loaderSublabel) { loaderSublabel.style.display = ''; loaderSublabel.textContent = '点击屏幕重试'; }
+        loaderStatus.textContent = '点击屏幕启动 AR';
+        arStarted = false;
       });
 
       // 识别到名片
@@ -278,8 +368,8 @@
         dbg.innerHTML += t + ' ' + msg + '<br>';
         dbg.scrollTop = dbg.scrollHeight;
       }
-      log('页面加载完成');
-      scene.addEventListener('arReady',     () => { log('✅ arReady — 摄像头就绪'); });
+      log('页面加载完成（点击加载画面启动 AR）');
+      scene.addEventListener('arReady',     () => { log('✅ arReady — 摄像头就绪'); }, { once: false });
       scene.addEventListener('targetFound', () => { log('✅ targetFound — 识别到名片'); });
       scene.addEventListener('targetLost',  () => { log('⚠️ targetLost — 丢失名片'); });
       window.addEventListener('error', e => log('❌ ' + e.message));
