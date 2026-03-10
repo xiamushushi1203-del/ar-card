@@ -1,288 +1,96 @@
 <!DOCTYPE html>
-<html lang="zh">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AR Name Card</title>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { overflow: hidden; }
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MindAR Test</title>
 
-      /* ── 加载画面 ── */
-      #loading-screen {
-        position: fixed; inset: 0;
-        background: #f0de00;
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        z-index: 9999;
-        transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1);
-        overflow: hidden;
-      }
-      #loading-screen.hidden { opacity: 0; pointer-events: none; }
+  <!-- 用官方推荐版本 -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-      /* 背景扩散圆环 */
-      #loading-screen::before {
-        content: '';
-        position: absolute;
-        width: 420px; height: 420px;
-        border-radius: 50%;
-        border: 1.5px solid rgba(0,0,0,0.08);
-        animation: expandRing 2.5s ease-out infinite;
-      }
-      #loading-screen::after {
-        content: '';
-        position: absolute;
-        width: 420px; height: 420px;
-        border-radius: 50%;
-        border: 1.5px solid rgba(0,0,0,0.05);
-        animation: expandRing 2.5s ease-out 0.8s infinite;
-      }
-      @keyframes expandRing {
-        0%   { transform: scale(0.3); opacity: 0.6; }
-        100% { transform: scale(1.8); opacity: 0; }
-      }
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    #debug {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 9999;
+      background: rgba(0,0,0,.7);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.5;
+      max-width: 80vw;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="debug">准备中…</div>
 
-      /* 名字大字 */
-      .loader-name {
-        font-family: 'DM Serif Display', serif;
-        font-style: italic;
-        font-size: 52px;
-        color: #1a1a18;
-        letter-spacing: -0.02em;
-        line-height: 1;
-        margin-bottom: 6px;
-        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
-      }
-      .loader-tagline {
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 300;
-        font-size: 11px;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        color: rgba(26,26,24,0.5);
-        margin-bottom: 52px;
-        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both;
-      }
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(12px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind;"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    embedded
+  >
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      /* 进度条 */
-      .loader-bar-wrap {
-        width: 120px; height: 1px;
-        background: rgba(26,26,24,0.15);
-        border-radius: 1px; overflow: hidden;
-        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both;
-      }
-      .loader-bar {
-        height: 100%; width: 0%;
-        background: #1a1a18; border-radius: 1px;
-        animation: barFill 2.2s cubic-bezier(0.4,0,0.2,1) 0.3s forwards;
-      }
-      @keyframes barFill {
-        0%   { width: 0%; }
-        60%  { width: 75%; }
-        100% { width: 100%; }
-      }
-      .loader-status {
-        margin-top: 14px;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 10px; letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: rgba(26,26,24,0.4);
-        animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.25s both;
-      }
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane color="#FFD84D" width="1" height="0.6" position="0 0 0"></a-plane>
+      <a-text
+        value="Target Detected"
+        align="center"
+        color="#000"
+        width="2"
+        position="0 0 0.01"
+      ></a-text>
+    </a-entity>
+  </a-scene>
 
-      /* ── 扫描提示 ── */
-      #scan-hint {
-        position: fixed; bottom: 44px; left: 50%;
-        transform: translateX(-50%);
-        background: rgba(10,10,8,0.55);
-        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        color: rgba(255,255,255,0.9); font-size: 12px;
-        letter-spacing: 0.12em; padding: 11px 22px;
-        border-radius: 100px; border: 1px solid rgba(255,255,255,0.12);
-        z-index: 100; opacity: 0; transition: opacity 0.5s ease;
-        font-family: 'DM Sans', sans-serif; white-space: nowrap;
-      }
-      #scan-hint.show { opacity: 1; }
-      #scan-hint.hide { opacity: 0; pointer-events: none; }
-    </style>
-  </head>
-  <body>
-    <div id="loading-screen">
-      <p class="loader-name">Zixuan Cai</p>
-      <p class="loader-tagline">AR Name Card</p>
-      <div class="loader-bar-wrap">
-        <div class="loader-bar"></div>
-      </div>
-      <p class="loader-status">Initializing…</p>
-    </div>
-    <div id="scan-hint">将摄像头对准名片</div>
+  <script>
+    const debug = document.getElementById("debug");
+    const scene = document.querySelector("a-scene");
 
-    <a-scene
-      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
-      color-space="sRGB"
-      renderer="colorManagement: true;"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-    >
-      <a-assets>
-        <!-- ✏️ 把你的素材放进 assets/ 文件夹，修改下方文件名 -->
+    function log(msg) {
+      console.log(msg);
+      debug.textContent += "\n" + msg;
+    }
 
-        <!-- 介绍视频（与名片同尺寸） -->
-        <video id="main-video" src="assets/video.mp4"
-          playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
-        </video>
+    window.addEventListener("load", () => {
+      debug.textContent = "window loaded";
+      log("页面加载完成");
+    });
 
-        <!-- 作品集图片（3张） -->
-        <img id="work1" src="assets/work1.png" crossorigin="anonymous" />
-        <img id="work2" src="assets/work2.png" crossorigin="anonymous" />
-        <img id="work3" src="assets/work3.png" crossorigin="anonymous" />
+    scene.addEventListener("loaded", () => log("a-scene loaded"));
+    scene.addEventListener("renderstart", () => log("renderstart"));
+    scene.addEventListener("arReady", () => log("✅ arReady 触发"));
+    scene.addEventListener("arError", (e) => {
+      log("❌ arError: " + JSON.stringify(e.detail || {}));
+    });
 
-        <!-- 社交图标（透明PNG，建议200×200px） -->
-        <img id="icon-rednote" src="assets/icon-rednote.png" crossorigin="anonymous" />
-        <img id="icon-wechat"  src="assets/icon-wechat.png"  crossorigin="anonymous" />
-      </a-assets>
+    document.addEventListener("visibilitychange", () => {
+      log("visibility: " + document.visibilityState);
+    });
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-      <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-
-        <!-- 1. 视频层：可缩小比例（scale=0.8 即 80%，改此数即可调节大小） -->
-        <!-- 视频比例 3509×2481 → 满屏为 width=1 height≈0.707 -->
-        <a-video id="ar-video" src="#main-video"
-          position="0 0 0.001" width="0.8" height="0.566"
-          material="transparent: true; opacity: 0"
-          animation__appear="property: material.opacity; to: 1; dur: 600; easing: easeOutQuad; startEvents: videoStart">
-        </a-video>
-
-        <!-- 2. 作品集图片：名片下方横排，视频半程时滑入（y 已按新卡片高度 0.707 适配） -->
-        <a-image id="work-1" src="#work1"
-          position="-0.38 -0.85 0.01" width="0.32" height="0.20"
-          material="transparent: true; opacity: 0"
-          animation__slidein="property: position; to: -0.38 -0.55 0.01; dur: 500; easing: easeOutBack; startEvents: showExtras"
-          animation__fadein="property: material.opacity; to: 1; dur: 400; startEvents: showExtras"
-          class="clickable"
-          data-url="work1.html">
-        </a-image>
-
-        <a-image id="work-2" src="#work2"
-          position="0 -0.85 0.01" width="0.32" height="0.20"
-          material="transparent: true; opacity: 0"
-          animation__slidein="property: position; to: 0 -0.55 0.01; dur: 500; delay: 80; easing: easeOutBack; startEvents: showExtras"
-          animation__fadein="property: material.opacity; to: 1; dur: 400; delay: 80; startEvents: showExtras"
-          class="clickable"
-          data-url="work2.html">
-        </a-image>
-
-        <a-image id="work-3" src="#work3"
-          position="0.38 -0.85 0.01" width="0.32" height="0.20"
-          material="transparent: true; opacity: 0"
-          animation__slidein="property: position; to: 0.38 -0.55 0.01; dur: 500; delay: 160; easing: easeOutBack; startEvents: showExtras"
-          animation__fadein="property: material.opacity; to: 1; dur: 400; delay: 160; startEvents: showExtras"
-          class="clickable"
-          data-url="work3.html">
-        </a-image>
-
-        <!-- 3. 社交图标：名片右侧，同步滑入。点击后在新标签页打开下方 data-url 的链接 -->
-        <!-- 小红书：把 data-url 改成你的小红书主页链接（见下方说明） -->
-        <a-image id="btn-rednote" src="#icon-rednote"
-          position="0.8 -0.12 0.01" width="0.14" height="0.14"
-          material="transparent: true; opacity: 0"
-          animation__slidein="property: position; to: 0.62 -0.12 0.01; dur: 450; delay: 50; easing: easeOutBack; startEvents: showExtras"
-          animation__fadein="property: material.opacity; to: 1; dur: 350; delay: 50; startEvents: showExtras"
-          animation__pulse="property: scale; to: 1.08 1.08 1; dur: 800; dir: alternate; loop: true; easing: easeInOutSine"
-          class="clickable"
-          data-url="https://www.xiaohongshu.com/user/profile/610ccdc0000000000101d2f9">
-        </a-image>
-
-        <!-- 微信：把 data-url 改成你的二维码页面链接或微信号展示页链接 -->
-        <a-image id="btn-wechat" src="#icon-wechat"
-          position="0.8 -0.28 0.01" width="0.14" height="0.14"
-          material="transparent: true; opacity: 0"
-          animation__slidein="property: position; to: 0.62 -0.28 0.01; dur: 450; delay: 160; easing: easeOutBack; startEvents: showExtras"
-          animation__fadein="property: material.opacity; to: 1; dur: 350; delay: 160; startEvents: showExtras"
-          animation__pulse="property: scale; to: 1.08 1.08 1; dur: 800; dir: alternate; loop: true; delay: 250; easing: easeInOutSine"
-          class="clickable"
-          data-url="https://www.figma.com/board/jzSb3oe5202wutuxvNru3P/Untitled?node-id=0-1&amp;t=b49XkvM1nCuJrE2R-1">
-        </a-image>
-
-      </a-entity>
-    </a-scene>
-
-    <script>
-      const loadingEl  = document.getElementById('loading-screen');
-      const scanHintEl = document.getElementById('scan-hint');
-      const video      = document.getElementById('main-video');
-      const scene      = document.querySelector('a-scene');
-      const arVideo    = document.getElementById('ar-video');
-
-      let extrasShown = false;
-      let halfTimer   = null;
-
-      // AR 就绪 → 隐藏加载画面，显示扫描提示
-      scene.addEventListener('arReady', () => {
-        loadingEl.classList.add('hidden');
-        scanHintEl.classList.add('show');
+    navigator.mediaDevices?.getUserMedia?.({ video: true })
+      .then((stream) => {
+        log("✅ getUserMedia ok");
+        stream.getTracks().forEach(track => track.stop());
+      })
+      .catch((err) => {
+        log("❌ getUserMedia failed: " + err.name + " / " + err.message);
       });
-
-      // 识别到名片
-      scene.addEventListener('targetFound', () => {
-        scanHintEl.classList.remove('show');
-        scanHintEl.classList.add('hide');
-        extrasShown = false;
-
-        video.currentTime = 0;
-        video.play().catch(() => {});
-        arVideo.emit('videoStart');
-
-        // 每200ms检查：播到一半 → 触发图标和作品图
-        halfTimer = setInterval(() => {
-          if (!video.paused && video.duration > 0) {
-            if (video.currentTime >= video.duration / 2 && !extrasShown) {
-              extrasShown = true;
-              clearInterval(halfTimer);
-              document.querySelectorAll('[animation__slidein]').forEach(el => el.emit('showExtras'));
-            }
-          }
-        }, 200);
-      });
-
-      // 丢失名片 → 暂停，重显提示
-      scene.addEventListener('targetLost', () => {
-        video.pause();
-        clearInterval(halfTimer);
-        scanHintEl.classList.remove('hide');
-        scanHintEl.classList.add('show');
-      });
-
-      // 社交图标点击跳转
-      document.querySelectorAll('[data-url]').forEach(el => {
-        el.addEventListener('click', () => {
-          const url = el.getAttribute('data-url');
-          if (url) window.open(url, '_blank');
-        });
-      });
-
-      // 屏幕调试面板
-      const dbg = document.createElement('div');
-      dbg.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.75);color:#0f0;font-size:11px;padding:10px;border-radius:8px;z-index:99999;font-family:monospace;max-height:40vh;overflow-y:auto;';
-      document.body.appendChild(dbg);
-      function log(msg) {
-        const t = new Date().toLocaleTimeString();
-        dbg.innerHTML += t + ' ' + msg + '<br>';
-        dbg.scrollTop = dbg.scrollHeight;
-      }
-      log('页面加载完成');
-      scene.addEventListener('arReady',     () => { log('✅ arReady — 摄像头就绪'); });
-      scene.addEventListener('targetFound', () => { log('✅ targetFound — 识别到名片'); });
-      scene.addEventListener('targetLost',  () => { log('⚠️ targetLost — 丢失名片'); });
-      window.addEventListener('error', e => log('❌ ' + e.message));
-    </script>
-  </body>
+  </script>
+</body>
 </html>
