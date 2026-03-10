@@ -117,6 +117,37 @@
       }
       #scan-hint.show { opacity: 1; }
       #scan-hint.hide { opacity: 0; pointer-events: none; }
+
+      /* 开启声音按钮：识别到名片后显示，点击后取消静音 */
+      #unmute-btn {
+        position: fixed; top: 14px; right: 14px;
+        z-index: 101; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        padding: 10px 18px; border-radius: 100px;
+        background: rgba(10,10,8,0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-size: 12px; font-family: 'DM Sans', sans-serif;
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+      }
+      #unmute-btn.show { opacity: 1; pointer-events: auto; }
+
+      /* AR 链接 overlay：作品集 + 社交，用普通 HTML 按钮避免 iOS 上 a-image 点击不触发 */
+      #ar-overlay-buttons {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        z-index: 101; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+        max-width: 94%; padding: 12px;
+        background: rgba(10,10,8,0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border-radius: 16px; border: 1px solid rgba(255,255,255,0.12);
+      }
+      #ar-overlay-buttons.show { opacity: 1; pointer-events: auto; }
+      #ar-overlay-buttons .ar-link-btn {
+        padding: 10px 16px; border-radius: 100px;
+        background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+        color: #fff; font-size: 12px; font-family: 'DM Sans', sans-serif;
+        text-decoration: none; white-space: nowrap;
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+      }
+      #ar-overlay-buttons .ar-link-btn:active { opacity: 0.85; }
     </style>
   </head>
   <body>
@@ -131,6 +162,16 @@
       <p id="loading-error"></p>
     </div>
     <div id="scan-hint">将摄像头对准名片</div>
+
+    <button type="button" id="unmute-btn" aria-label="开启声音">🔊 开启声音</button>
+
+    <div id="ar-overlay-buttons">
+      <a class="ar-link-btn" href="work1.html">作品 1</a>
+      <a class="ar-link-btn" href="work2.html">作品 2</a>
+      <a class="ar-link-btn" href="work3.html">作品 3</a>
+      <a class="ar-link-btn" href="https://www.xiaohongshu.com/user/profile/610ccdc0000000000101d2f9" target="_blank" rel="noopener">小红书</a>
+      <a class="ar-link-btn" href="https://www.figma.com/board/jzSb3oe5202wutuxvNru3P/Untitled?node-id=0-1&amp;t=b49XkvM1nCuJrE2R-1" target="_blank" rel="noopener">Figma</a>
+    </div>
 
     <!-- iOS Safari：autoStart: false，在用户点击后再请求摄像头 -->
     <a-scene
@@ -229,10 +270,13 @@
       const loaderStatus = document.getElementById('loader-status');
       const loaderSublabel = document.getElementById('loader-sublabel');
       const loadingErr   = document.getElementById('loading-error');
-      const scanHintEl   = document.getElementById('scan-hint');
-      const video        = document.getElementById('main-video');
-      const scene        = document.querySelector('a-scene');
-      const arVideo      = document.getElementById('ar-video');
+      const scanHintEl      = document.getElementById('scan-hint');
+      const unmuteBtn       = document.getElementById('unmute-btn');
+      const arOverlayBtns   = document.getElementById('ar-overlay-buttons');
+      const video           = document.getElementById('main-video');
+      const scene           = document.querySelector('a-scene');
+      const cardTarget      = document.getElementById('card-target');
+      const arVideo         = document.getElementById('ar-video');
 
       let sceneLoaded = false;
       let arStarted = false;
@@ -355,41 +399,45 @@
       });
 
       // 识别到名片
-      scene.addEventListener('targetFound', () => {
+      cardTarget.addEventListener('targetFound', () => {
         scanHintEl.classList.remove('show');
         scanHintEl.classList.add('hide');
         extrasShown = false;
+        unmuteBtn.classList.add('show');
+        arOverlayBtns.classList.remove('show');
 
         video.currentTime = 0;
         video.play().catch(() => {});
         arVideo.emit('videoStart');
 
-        // 每200ms检查：播到一半 → 触发图标和作品图
+        // 每200ms检查：播到一半 → 触发图标和作品图，并显示 overlay 链接按钮
         halfTimer = setInterval(() => {
           if (!video.paused && video.duration > 0) {
             if (video.currentTime >= video.duration / 2 && !extrasShown) {
               extrasShown = true;
               clearInterval(halfTimer);
               document.querySelectorAll('[animation__slidein]').forEach(el => el.emit('showExtras'));
+              arOverlayBtns.classList.add('show');
             }
           }
         }, 200);
       });
 
-      // 丢失名片 → 暂停，重显提示
-      scene.addEventListener('targetLost', () => {
+      // 丢失名片 → 暂停，恢复静音，重显提示，隐藏声音按钮和 overlay
+      cardTarget.addEventListener('targetLost', () => {
         video.pause();
+        video.muted = true;
         clearInterval(halfTimer);
         scanHintEl.classList.remove('hide');
         scanHintEl.classList.add('show');
+        unmuteBtn.classList.remove('show');
+        arOverlayBtns.classList.remove('show');
       });
 
-      // 社交图标点击跳转
-      document.querySelectorAll('[data-url]').forEach(el => {
-        el.addEventListener('click', () => {
-          const url = el.getAttribute('data-url');
-          if (url) window.open(url, '_blank');
-        });
+      // 开启声音：用户点击后取消静音并播放（iOS 需用户手势才能有声）
+      unmuteBtn.addEventListener('click', () => {
+        video.muted = false;
+        video.play().catch(() => {});
       });
 
       // 屏幕调试面板
@@ -403,8 +451,8 @@
       }
       log('页面加载完成（点击加载画面启动 AR）');
       scene.addEventListener('arReady',     () => { log('✅ arReady — 摄像头就绪'); }, { once: false });
-      scene.addEventListener('targetFound', () => { log('✅ targetFound — 识别到名片'); });
-      scene.addEventListener('targetLost',  () => { log('⚠️ targetLost — 丢失名片'); });
+      cardTarget.addEventListener('targetFound', () => { log('✅ targetFound — 识别到名片'); });
+      cardTarget.addEventListener('targetLost',  () => { log('⚠️ targetLost — 丢失名片'); });
       window.addEventListener('error', e => log('❌ ' + e.message));
     </script>
   </body>
