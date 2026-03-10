@@ -120,7 +120,7 @@
 
       /* 开启声音按钮：识别到名片后显示，点击后取消静音 */
       #unmute-btn {
-        position: fixed; top: 14px; right: 14px;
+        position: fixed; top: calc(env(safe-area-inset-top) + 60px); right: 14px;
         z-index: 101; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
         padding: 10px 18px; border-radius: 100px;
         background: rgba(10,10,8,0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -286,10 +286,7 @@
       let readyTimeout = null;
 
       // 必须等 a-scene 触发 loaded 后再访问 mindar-image-system，否则 iPhone Safari 报错
-      scene.addEventListener('loaded', () => {
-        sceneLoaded = true;
-        if (typeof log === 'function') log('✅ a-scene loaded — 场景已加载');
-      });
+      scene.addEventListener('loaded', () => { sceneLoaded = true; });
 
       function getARSystem() {
         if (!sceneLoaded) return null;
@@ -307,15 +304,9 @@
       }
 
       function startAR() {
-        log('startAR called');
-
-        if (arStarted) {
-          log('⚠️ already started');
-          return;
-        }
+        if (arStarted) return;
 
         if (!sceneLoaded) {
-          log('⚠️ scene not loaded yet');
           loaderStatus.textContent = '场景加载中，请稍候…';
           if (loaderSublabel) loaderSublabel.textContent = '约 1～2 秒后再点屏幕';
           window.setTimeout(() => {
@@ -327,7 +318,6 @@
           return;
         }
 
-        log('✅ scene loaded, starting AR');
         arStarted = true;
         loadingEl.classList.remove('waiting', 'error');
         loadingErr.textContent = '';
@@ -364,7 +354,6 @@
       }
 
       loadingEl.addEventListener('click', () => {
-        log('👆 loading screen clicked');
         if (loadingEl.classList.contains('hidden')) return;
         if (!arStarted) { startAR(); return; }
         if (loadingEl.classList.contains('error')) {
@@ -439,21 +428,6 @@
         video.muted = false;
         video.play().catch(() => {});
       });
-
-      // 屏幕调试面板
-      const dbg = document.createElement('div');
-      dbg.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.75);color:#0f0;font-size:11px;padding:10px;border-radius:8px;z-index:99999;font-family:monospace;max-height:40vh;overflow-y:auto;';
-      document.body.appendChild(dbg);
-      function log(msg) {
-        const t = new Date().toLocaleTimeString();
-        dbg.innerHTML += t + ' ' + msg + '<br>';
-        dbg.scrollTop = dbg.scrollHeight;
-      }
-      log('页面加载完成（点击加载画面启动 AR）');
-      scene.addEventListener('arReady',     () => { log('✅ arReady — 摄像头就绪'); }, { once: false });
-      cardTarget.addEventListener('targetFound', () => { log('✅ targetFound — 识别到名片'); });
-      cardTarget.addEventListener('targetLost',  () => { log('⚠️ targetLost — 丢失名片'); });
-      window.addEventListener('error', e => log('❌ ' + e.message));
     </script>
   </body>
 </html>
