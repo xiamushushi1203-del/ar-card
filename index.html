@@ -233,13 +233,18 @@
       const scene        = document.querySelector('a-scene');
       const arVideo      = document.getElementById('ar-video');
 
+      let sceneLoaded = false;
       let arStarted = false;
       let arReadyFired = false;
       let extrasShown = false;
       let halfTimer = null;
       let readyTimeout = null;
 
+      // 必须等 a-scene 触发 loaded 后再访问 mindar-image-system，否则 iPhone Safari 报错
+      scene.addEventListener('loaded', () => { sceneLoaded = true; });
+
       function getARSystem() {
+        if (!sceneLoaded) return null;
         return scene.systems['mindar-image-system'] || scene.systems['mindar-image'] || null;
       }
       function clearReadyTimeout() {
@@ -255,6 +260,7 @@
 
       function startAR() {
         if (arStarted) return;
+        if (!sceneLoaded) return; // 场景未加载完成时不访问 systems，避免报错
         arStarted = true;
         loadingEl.classList.remove('waiting', 'error');
         loadingErr.textContent = '';
